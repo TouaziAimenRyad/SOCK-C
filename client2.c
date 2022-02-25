@@ -17,7 +17,7 @@ int main(int argc, char const *argv[])
     assert(argc==2);
     int connection_socket=socket(PF_INET,SOCK_STREAM,0);
     struct sockaddr_in server_adr;
-    char * adr_ip="127.0.0.1";//change this based on lulu in ordre to connect from other networks 
+    char * adr_ip="194.254.199.32";//change this based on lulu in ordre to connect from other networks 
     server_adr.sin_family=AF_INET;
     server_adr.sin_port=htons((uint16_t)atoi(argv[1]));
     inet_aton(adr_ip,&server_adr.sin_addr);
