@@ -10,6 +10,7 @@
 #include <sys/stat.h>
 #include <fcntl.h>
 #include <assert.h>
+#include <netdb.h> 
 #define  MAX_NAME 10
 
 
@@ -17,10 +18,22 @@ int main(int argc, char const *argv[])
 {   
     assert(argc==2);
     struct sockaddr_in server_adr;
-    char * adr_ip="194.254.199.32";//change this based on lulu in ordre to connect from other networks 
+
+    struct hostent *server;
+    server=gethostbyname("lucy.informatique.univ-paris-diderot.fr"); 
+    if(server==NULL)
+    {
+        perror("couldn't find the host\n");
+        exit(1);
+    }
+
+    struct in_addr **addresses=(struct in_addr**)server->h_addr_list;
     server_adr.sin_family=AF_INET;
     server_adr.sin_port=htons((uint16_t)atoi(argv[1]));
-    inet_aton(adr_ip,&server_adr.sin_addr);
+    server_adr.sin_addr=(**addresses);
+    printf("Address : %s\n",inet_ntoa(**addresses));
+    printf("Address2 : %s\n",inet_ntoa(server_adr.sin_addr));
+
     int size=sizeof(server_adr);
 
     for (int i = 0; i < 5;  i++)
