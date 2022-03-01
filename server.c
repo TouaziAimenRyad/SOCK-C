@@ -86,20 +86,29 @@ void * maxint(void * s)
    int  client_sock=*client.sock;
    
    char psudo[MAX_NAME];
-   int client_mesg_size=3+sizeof(uint16_t)+sizeof(uint32_t);
-   
-   recv(client_sock,psudo,MAX_NAME,0);
+   int client_mesg_size=3+1+sizeof(uint16_t);
+
+   if (recv(client_sock,psudo,MAX_NAME,0)<0)
+   {
+       perror("prolem while recieving\n");
+   }
    char * save_buff=malloc(MAX_NAME);
    strcpy(save_buff,psudo);//this is used to save the name i need it cause for some reason the psudo is gettin emptied some how after receving the msg  
-   printf("client: %s\n",psudo);
+   printf("%s request connection as a client\n",psudo);
 
    char hello[6+MAX_NAME]="HELLO ";
    strcat(hello,psudo);
-   send(client_sock,hello,MAX_NAME+6,0);
-
+   if (send(client_sock,hello,MAX_NAME+6,0)<0)
+   {
+      perror("prolem while sending\n");
+   }
+   
    void* client_message=malloc(client_mesg_size);
-   recv(client_sock,client_message,client_mesg_size,0);
-
+   if (recv(client_sock,client_message,client_mesg_size,0)<0)
+   {
+       perror("prolem while recieving\n");
+   }
+   
    char request[4];
    strcpy(request,(char*)client_message);
  
@@ -121,13 +130,25 @@ void * maxint(void * s)
        strcpy((char *)message_max ,rep);
        *((uint32_t *)(message_max+3+10+1))=htonl(max.ip);
        *((uint16_t *)(message_max+10+3+1+sizeof(uint32_t)))=htons(max.num);
-
-       send(client_sock,message_max,max_message_size,0);
+       
+       if (send(client_sock,message_max,max_message_size,0)<0)
+       {
+            perror("prolem while sending\n");
+       }
+       
+       
 
      }
      else
-     {
-       send(client_sock,"NOP\0",4,0);
+     { 
+         if (send(client_sock,"NOP\0",4,0)<0)
+         {
+        
+           perror("prolem while sending\n");
+
+         }
+     
+       
      }
      
      pthread_mutex_unlock(&verrou);
@@ -138,7 +159,10 @@ void * maxint(void * s)
   if (strcmp(request,"INT ")==0)
   {
       uint16_t num=(*(uint16_t *)(client_message+4));
-      send(client_sock,"INTOK\0",6,0);
+      if (send(client_sock,"INTOK\0",6,0)<0)
+      {
+          perror("prolem while sending\n");
+      }
       
       struct data x;
       x.ip=client.caller_adr->sin_addr.s_addr;

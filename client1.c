@@ -20,7 +20,7 @@ int main(int argc, char const *argv[])
     struct sockaddr_in server_adr;
 
     struct hostent *server;
-    server=gethostbyname("lucy.informatique.univ-paris-diderot.fr"); 
+    server=gethostbyname("lulu.informatique.univ-paris-diderot.fr"); 
     if(server==NULL)
     {
         perror("couldn't find the host\n");
@@ -31,8 +31,8 @@ int main(int argc, char const *argv[])
     server_adr.sin_family=AF_INET;
     server_adr.sin_port=htons((uint16_t)atoi(argv[1]));
     server_adr.sin_addr=(**addresses);
-    printf("Address : %s\n",inet_ntoa(**addresses));
-    printf("Address2 : %s\n",inet_ntoa(server_adr.sin_addr));
+    printf("connecting to Address : %s\n",inet_ntoa(**addresses));
+    
 
     int size=sizeof(server_adr);
 
@@ -46,25 +46,39 @@ int main(int argc, char const *argv[])
             char *psudo=malloc(MAX_NAME);
             char *response1=malloc(16);
             char *responseOK=malloc(6);
-            int n;
+            uint16_t n;
             printf("ENTER PSUDO%d  :",i);
             scanf("%10s",psudo);
-            send(connection_socket,psudo,MAX_NAME,0);
-            recv(connection_socket,response1,MAX_NAME+6,0);
-            printf("server: %s\n",response1);
+            if (send(connection_socket,psudo,MAX_NAME,0)<0)
+            {
+                perror("prolem while sending\n");
+            }
+            
+            if (recv(connection_socket,response1,MAX_NAME+6,0)<0)
+            {
+                perror("prolem while receiving\n");
+            }
+            printf("server reply : %s\n",response1);
     
             printf("ENTER NUMBER%d : ",i);
-            scanf("%d",&n);
-            int size=4+sizeof(uint16_t);
+            scanf("%hd",&n);
     
-            void * message=malloc(size);
+            void * message=malloc(4+sizeof(uint16_t));
             uint16_t num = htons((uint16_t)n);
             strcpy((char *)(message),"INT ");
             *((uint16_t *)(message+4))=num;
-            send(connection_socket,message,4+sizeof(uint16_t),0);
-    
-            recv(connection_socket,responseOK,6,0);
-            printf("server: %s\n",responseOK);
+            if (send(connection_socket,message,4+sizeof(uint16_t),0)<0)
+            {
+                perror("prolem while sending\n");
+            }
+            
+            if (recv(connection_socket,responseOK,6,0)<0)
+            {
+                perror("prolem while receiving\n");
+            }
+            
+            
+            printf("server reply : %s\n",responseOK);
     
             free(message);message=NULL;
             free(psudo);psudo=NULL;

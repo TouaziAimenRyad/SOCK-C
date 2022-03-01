@@ -21,7 +21,7 @@ int main(int argc, char const *argv[])
 
     struct sockaddr_in server_adr;
     struct hostent *server;
-    server=gethostbyname("lucy.informatique.univ-paris-diderot.fr"); 
+    server=gethostbyname("lulu.informatique.univ-paris-diderot.fr"); 
     if(server==NULL)
     {
         perror("couldn't find the host\n");
@@ -33,32 +33,48 @@ int main(int argc, char const *argv[])
     server_adr.sin_port=htons((uint16_t)atoi(argv[1]));
     server_adr.sin_addr=(**(addresses));
 
-    printf("Address : %s\n",inet_ntoa(**addresses));
-    printf("Address2 : %s\n",inet_ntoa(server_adr.sin_addr));
+    printf("connecting to Address : %s\n",inet_ntoa(**addresses));
+    
 
     int size=sizeof(server_adr);
 
     if (connect(connection_socket,(struct sockaddr *)&server_adr,(socklen_t)size)==0){
-        printf("fghjkjhgf");
+
         char *psudo=malloc(MAX_NAME);
-        char *response1=malloc(16);
+        char *response1=malloc(MAX_NAME+6);
       
         printf("ENTER PSUDO  :");
         scanf("%10s",psudo);
-        send(connection_socket,psudo,MAX_NAME,0);
+        if (send(connection_socket,psudo,MAX_NAME,0)<0)
+        {
+            perror("prolem while sending\n");
+        }
+        
+        if (recv(connection_socket,response1,MAX_NAME+6,0)<0)
+        {
+            perror("prolem while recieving\n");
+        }
+        printf("server reply: %s\n",response1);
 
-        recv(connection_socket,response1,MAX_NAME+6,0);
-        printf("server: %s\n",response1);
-
-        send(connection_socket,"MAX\0",4,0);
+        if (send(connection_socket,"MAX\0",4,0)<0)
+        {
+            perror("prolem while sending\n");           
+        }
+        
+        
 
         int size=MAX_NAME+sizeof(uint32_t)+sizeof(uint16_t)+4;
         void * response=malloc(size);
-        recv(connection_socket,response,size,0);
+        if ( recv(connection_socket,response,size,0)<0)
+        {
+            perror("prolem while recieving\n");
+        }
+        
+       
 
         if(strcmp((char *)response,"NOP\0")==0)
         {
-            printf("server: no max int\n");
+            printf("server reply: no max int\n");
         }
         else
         {
@@ -68,10 +84,10 @@ int main(int argc, char const *argv[])
             char max_psudo[MAX_NAME];
             char * ip_str=inet_ntoa(ip);
             strcpy(max_psudo,(char *)(response+3));
-            printf("server : max int : %s  %s  %d \n",max_psudo,ip_str,max);
+            printf("server reply : max int : %s  %s  %d \n",max_psudo,ip_str,max);
         }
 
-    }else{printf("hhhhhhhhhhhhhhhhh");}
+    }
     close(connection_socket);
 
     return 0;
