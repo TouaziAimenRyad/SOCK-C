@@ -94,7 +94,7 @@ void * maxint(void * s)
    }
    char * save_buff=malloc(MAX_NAME);
    strcpy(save_buff,psudo);//this is used to save the name i need it cause for some reason the psudo is gettin emptied some how after receving the msg  
-   printf("%s request connection as a client\n",psudo);
+   printf("%s requests connection as a client\n",psudo);
 
    char hello[6+MAX_NAME]="HELLO ";
    strcat(hello,psudo);
@@ -104,13 +104,29 @@ void * maxint(void * s)
    }
    
    void* client_message=malloc(client_mesg_size);
-   if (recv(client_sock,client_message,client_mesg_size,0)<0)
+  /* if (recv(client_sock,client_message,client_mesg_size,0)<0)
    {
        perror("prolem while recieving\n");
+   }*/
+   int inc=0;
+   while (inc<client_mesg_size)
+   {
+       int a= recv(client_sock,client_message,client_mesg_size-inc,0);
+       if(a==-1)
+       { 
+           perror("error while recieving\n");
+
+
+       }
+       inc+=a;
    }
    
-   char request[4];
+   
+    
+
+   char *request=malloc(4);
    strcpy(request,(char*)client_message);
+   printf("cccccccccccccc  %s  ccccccc %d\n",request,(*(uint16_t *)(client_message+4)));
  
 
   if(strcmp(request,"MAX\0")==0)
@@ -156,7 +172,7 @@ void * maxint(void * s)
 
 
 
-  if (strcmp(request,"INT ")==0)
+  if (strcmp(request,"INT\0")==0)
   {
       uint16_t num=(*(uint16_t *)(client_message+4));
       if (send(client_sock,"INTOK\0",6,0)<0)
@@ -177,11 +193,12 @@ void * maxint(void * s)
       }
       pthread_mutex_unlock(&verrou);
       free(client_message);client_message=NULL;
-  }
+  }else{printf("dsdfghjkjhygtredfghjkjhgfdfgh\n");}
 
   free(save_buff);save_buff=NULL;
+  free(request);request=NULL;
 
-    
+    close(client_sock);
    
     return NULL;
 

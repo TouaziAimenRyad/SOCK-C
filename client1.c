@@ -31,7 +31,6 @@ int main(int argc, char const *argv[])
     server_adr.sin_family=AF_INET;
     server_adr.sin_port=htons((uint16_t)atoi(argv[1]));
     server_adr.sin_addr=(**addresses);
-    printf("connecting to Address : %s\n",inet_ntoa(**addresses));
     
 
     int size=sizeof(server_adr);
@@ -39,9 +38,10 @@ int main(int argc, char const *argv[])
     for (int i = 0; i < 5;  i++)
     {
         int connection_socket=socket(PF_INET,SOCK_STREAM,0);
-
+    
         if (connect(connection_socket,(struct sockaddr *)&server_adr,(socklen_t)size)==0)
         {
+    
         
             char *psudo=malloc(MAX_NAME);
             char *response1=malloc(16);
@@ -65,7 +65,7 @@ int main(int argc, char const *argv[])
     
             void * message=malloc(4+sizeof(uint16_t));
             uint16_t num = htons((uint16_t)n);
-            strcpy((char *)(message),"INT ");
+            strcpy((char *)(message),"INT\0");
             *((uint16_t *)(message+4))=num;
             if (send(connection_socket,message,4+sizeof(uint16_t),0)<0)
             {
