@@ -42,7 +42,7 @@ int main(int argc, char const *argv[])
         if (connect(connection_socket,(struct sockaddr *)&server_adr,(socklen_t)size)==0)
         {
     
-        
+            int inc=0;
             char *psudo=malloc(MAX_NAME);
             char *response1=malloc(16);
             char *responseOK=malloc(6);
@@ -52,11 +52,21 @@ int main(int argc, char const *argv[])
             if (send(connection_socket,psudo,MAX_NAME,0)<0)
             {
                 perror("prolem while sending\n");
+                close(connection_socket);
+                exit(1);
             }
             
-            if (recv(connection_socket,response1,MAX_NAME+6,0)<0)
+            while (inc<MAX_NAME+6)
             {
-                perror("prolem while receiving\n");
+                int r=recv(connection_socket,response1,MAX_NAME+6-inc,0);
+                if (r==-1)
+                {
+                    perror("prolem while receiving\n");
+                    close(connection_socket);
+                    exit(1);
+                }
+                inc+=r;
+                
             }
             printf("server reply : %s\n",response1);
     
@@ -65,19 +75,27 @@ int main(int argc, char const *argv[])
     
             void * message=malloc(4+sizeof(uint16_t));
             uint16_t num = htons((uint16_t)n);
-            strcpy((char *)(message),"INT\0");
+            strcpy((char *)(message),"INT ");
             *((uint16_t *)(message+4))=num;
             if (send(connection_socket,message,4+sizeof(uint16_t),0)<0)
             {
                 perror("prolem while sending\n");
+                close(connection_socket);
+                exit(1);
             }
-            
-            if (recv(connection_socket,responseOK,6,0)<0)
+            inc=0;
+            while (inc<5)
             {
-                perror("prolem while receiving\n");
+                int r=recv(connection_socket,responseOK,5-inc,0);
+                if (r==-1)
+                {
+                    perror("prolem while receiving\n");
+                    close(connection_socket);
+                    exit(1);
+                }
+                inc+=r;
             }
-            
-            
+            responseOK[5]='\0';
             printf("server reply : %s\n",responseOK);
     
             free(message);message=NULL;
@@ -87,6 +105,7 @@ int main(int argc, char const *argv[])
 
         }
            close(connection_socket);
+           
     }
     
 

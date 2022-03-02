@@ -36,58 +36,104 @@ int main(int argc, char const *argv[])
     printf("connecting to Address : %s\n",inet_ntoa(**addresses));
     
 
-    int size=sizeof(server_adr);
+    int size_adr=sizeof(server_adr);
 
-    if (connect(connection_socket,(struct sockaddr *)&server_adr,(socklen_t)size)==0){
+    if (connect(connection_socket,(struct sockaddr *)&server_adr,(socklen_t)size_adr)==0){
 
         char *psudo=malloc(MAX_NAME);
         char *response1=malloc(MAX_NAME+6);
-      
+        int inc ;
+
         printf("ENTER PSUDO  :");
         scanf("%10s",psudo);
         if (send(connection_socket,psudo,MAX_NAME,0)<0)
         {
             perror("prolem while sending\n");
+            close(connection_socket);
+            exit(1);
         }
         
-        if (recv(connection_socket,response1,MAX_NAME+6,0)<0)
+        inc=0;
+        while (inc < MAX_NAME+6)
         {
-            perror("prolem while recieving\n");
+            int r=recv(connection_socket,response1,MAX_NAME+6-inc,0);
+            if (r==-1)
+                {
+                    perror("prolem while receiving\n");
+                    close(connection_socket);
+                    exit(1);
+                }
+            inc+=r;
         }
         printf("server reply: %s\n",response1);
 
-        if (send(connection_socket,"MAX\0",4,0)<0)
+        if (send(connection_socket,"MAX",3,0)<0)
         {
-            perror("prolem while sending\n");           
+            perror("prolem while sending\n");  
+            close(connection_socket);
+            exit(1);         
         }
         
         
-
-        int size=MAX_NAME+sizeof(uint32_t)+sizeof(uint16_t)+4;
-        void * response=malloc(size);
-        if ( recv(connection_socket,response,size,0)<0)
+        char * res=malloc(4);
+        inc=0;
+        while (inc<3)
         {
-            perror("prolem while recieving\n");
+            int r=recv(connection_socket,res,3-inc,0);
+            if (r==-1)
+                {
+                    perror("prolem while receiving\n");
+                    close(connection_socket);
+                    exit(1);
+                }
+            inc+=r;
         }
-        
-       
+        res[3]='\0';
 
-        if(strcmp((char *)response,"NOP\0")==0)
+        if(strcmp(res,"NOP")==0)
         {
             printf("server reply: no max int\n");
         }
         else
         {
-            struct in_addr ip;
-            ip.s_addr=ntohl(*((uint32_t *)(response+1+3+10)));
-            uint16_t max=ntohs(*(uint16_t *)(response+1+3+10+sizeof(uint32_t)));
-            char max_psudo[MAX_NAME];
-            char * ip_str=inet_ntoa(ip);
-            strcpy(max_psudo,(char *)(response+3));
-            printf("server reply : max int : %s  %s  %d \n",max_psudo,ip_str,max);
+            if (strcmp(res,"REP")==0)
+            {
+            
+                int size=MAX_NAME+sizeof(uint32_t)+sizeof(uint16_t);
+                void * response=malloc(size);
+                inc=0;
+                while (inc<size)
+                {
+                     int r=recv(connection_socket,response,size-inc,0);
+                     if (r==-1)
+                     {
+                        perror("prolem while receiving\n");
+                        close(connection_socket);
+                        exit(1);
+                     }
+                     inc+=r;
+                }
+                struct in_addr ip;
+                ip.s_addr=ntohl(*((uint32_t *)(response+10)));
+                uint16_t max=ntohs(*(uint16_t *)(response+10+sizeof(uint32_t)));
+                char max_psudo[MAX_NAME];
+                char * ip_str=inet_ntoa(ip);
+                strcpy(max_psudo,(char *)(response));
+                printf("server reply : max int : %s  %s  %d \n",max_psudo,ip_str,max);
+                
+                free(response);response=NULL;
+        
+            }
+            
         }
-
+        
+        
+        free(psudo);psudo=NULL;
+        free(response1);response1=NULL;
+        free(res);res=NULL;
+        
     }
+    
     close(connection_socket);
 
     return 0;

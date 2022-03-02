@@ -84,106 +84,120 @@ void * maxint(void * s)
 {
    struct caller  client= *((struct caller *)s);
    int  client_sock=*client.sock;
-   
+   int inc;
    char psudo[MAX_NAME];
-   int client_mesg_size=3+1+sizeof(uint16_t);
+   int client_val_size=1+sizeof(uint16_t);
 
-   if (recv(client_sock,psudo,MAX_NAME,0)<0)
+   inc=0;
+   while (inc<MAX_NAME)
    {
-       perror("prolem while recieving\n");
+       int r=recv(client_sock,psudo,MAX_NAME-inc,0);
+       if (r==-1)
+        {
+            perror("prolem while receiving\n");
+            close(client_sock);
+            pthread_exit(NULL);
+        }
+        inc+=r;
    }
+   
    char * save_buff=malloc(MAX_NAME);
-   strcpy(save_buff,psudo);//this is used to save the name i need it cause for some reason the psudo is gettin emptied some how after receving the msg  
+   strcpy(save_buff,psudo); 
    printf("%s requests connection as a client\n",psudo);
+
 
    char hello[6+MAX_NAME]="HELLO ";
    strcat(hello,psudo);
    if (send(client_sock,hello,MAX_NAME+6,0)<0)
    {
       perror("prolem while sending\n");
+      close(client_sock);
+      pthread_exit(NULL);
    }
    
-   void* client_message=malloc(client_mesg_size);
-  /* if (recv(client_sock,client_message,client_mesg_size,0)<0)
+
+   void* client_val_msg=malloc(client_val_size);
+   char *request=malloc(3);
+   inc=0;
+   while (inc<3)
    {
-       perror("prolem while recieving\n");
-   }*/
-   int inc=0;
-   while (inc<client_mesg_size)
-   {
-       int a= recv(client_sock,client_message,client_mesg_size-inc,0);
-       if(a==-1)
-       { 
-           perror("error while recieving\n");
+       int r= recv(client_sock,request,3-inc,0);
+       if (r==-1)
+        {
+            perror("prolem while receiving\n");
+            close(client_sock);
+            pthread_exit(NULL);
+        }
+        inc+=r;
+   }
 
 
+   if(strcmp(request,"MAX")==0)
+   {
+       pthread_mutex_lock(&verrou);
+       if (num_insered>0)
+       {
+         struct data max=largest(store,num_insered);
+         int max_message_size=sizeof(uint16_t)+sizeof(uint32_t)+3+10;
+         void * message_max=malloc(max_message_size);
+         char rep[MAX_NAME+3]="REP";
+         strcat(rep,max.name);
+
+         strcpy((char *)message_max ,rep);
+         *((uint32_t *)(message_max+3+10))=htonl(max.ip);
+         *((uint16_t *)(message_max+10+3+sizeof(uint32_t)))=htons(max.num);
+         
+
+         if (send(client_sock,message_max,max_message_size,0)<0)
+         {
+              perror("prolem while sending\n");
+              close(client_sock);
+              pthread_exit(NULL);
+         }
+         free(message_max);message_max=NULL;
        }
-       inc+=a;
+       else
+       { 
+           if (send(client_sock,"NOP",3,0)<0)
+           {
+              perror("prolem while sending\n");
+              close(client_sock);
+              pthread_exit(NULL);
+           }
+       }
+       
+       pthread_mutex_unlock(&verrou);
    }
-   
-   
+
+
+   if (strcmp(request,"INT")==0)
+   {
+      inc =0;
+      while (inc<client_val_size)
+      {
+         int r= recv(client_sock,client_val_msg,client_val_size-inc,0);
+         if (r==-1)
+          {
+              perror("prolem while receiving\n");
+              close(client_sock);
+              pthread_exit(NULL);
+          }
+          inc+=r;
+      }
     
 
-   char *request=malloc(4);
-   strcpy(request,(char*)client_message);
-   printf("cccccccccccccc  %s  ccccccc %d\n",request,(*(uint16_t *)(client_message+4)));
- 
-
-  if(strcmp(request,"MAX\0")==0)
-  {
-     pthread_mutex_lock(&verrou);
-     if (num_insered>0)
-     {
-       struct data max=largest(store,num_insered);
-
-       int max_message_size=sizeof(uint16_t)+sizeof(uint32_t)+3+10+1;
-       void * message_max=malloc(max_message_size);
-
-       char rep[MAX_NAME+3+1]="REP";
-       strcat(rep,max.name);
-       strcat(rep,"\0");
-
-       strcpy((char *)message_max ,rep);
-       *((uint32_t *)(message_max+3+10+1))=htonl(max.ip);
-       *((uint16_t *)(message_max+10+3+1+sizeof(uint32_t)))=htons(max.num);
-       
-       if (send(client_sock,message_max,max_message_size,0)<0)
-       {
-            perror("prolem while sending\n");
-       }
-       
-       
-
-     }
-     else
-     { 
-         if (send(client_sock,"NOP\0",4,0)<0)
-         {
-        
-           perror("prolem while sending\n");
-
-         }
-     
-       
-     }
-     
-     pthread_mutex_unlock(&verrou);
-  }
-
-
-
-  if (strcmp(request,"INT\0")==0)
-  {
-      uint16_t num=(*(uint16_t *)(client_message+4));
-      if (send(client_sock,"INTOK\0",6,0)<0)
+      uint16_t num=(*(uint16_t *)(client_val_msg+1));
+      if (send(client_sock,"INTOK ",5,0)<0)
       {
           perror("prolem while sending\n");
+          close(client_sock);
+          pthread_exit(NULL);
       }
       
       struct data x;
       x.ip=client.caller_adr->sin_addr.s_addr;
       strcpy(x.name,save_buff); 
-      x.num=ntohs(*((uint16_t *)(client_message+4)));
+      x.num=ntohs(*((uint16_t *)(client_val_msg+1)));
       
       pthread_mutex_lock(&verrou);
       if (num_insered<MAX_ELEM)
@@ -192,13 +206,13 @@ void * maxint(void * s)
          num_insered++;
       }
       pthread_mutex_unlock(&verrou);
-      free(client_message);client_message=NULL;
-  }else{printf("dsdfghjkjhygtredfghjkjhgfdfgh\n");}
+      free(client_val_msg);client_val_msg=NULL;
+   }
 
-  free(save_buff);save_buff=NULL;
-  free(request);request=NULL;
-
-    close(client_sock);
+   free(save_buff);save_buff=NULL;
+   free(request);request=NULL;
+   close(client_sock);
+   pthread_exit(NULL);
    
     return NULL;
 
@@ -206,14 +220,13 @@ void * maxint(void * s)
 
 
 
+
+
 struct data largest(struct data arr[], int n)
 {
     int i;
-    
     struct data reslt=arr[0];
     uint16_t max = arr[0].num;
- 
-    
     for (i = 1; i < n; i++)
     {
        if (arr[i].num > max)
@@ -222,8 +235,5 @@ struct data largest(struct data arr[], int n)
             reslt=arr[i];
         }
     }
- 
-           
- 
     return reslt;
 }
